@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: streamflix_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: streamflix
+      POSTGRES_USER: streamflix_user
+      POSTGRES_PASSWORD: streamflix_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - streamflix_network
+
+  # Application Node.js (optionnel pour dev)
+  app:
+    build: .
+    container_name: streamflix_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://streamflix_user:streamflix_password@postgres:5432/streamflix
+      - TMDB_API_KEY=${TMDB_API_KEY}
+    networks:
+      - streamflix_network
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  streamflix_network:
+    driver: bridge
